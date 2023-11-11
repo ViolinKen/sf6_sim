@@ -210,6 +210,7 @@ impl Default for Viewer {
         }
     }
 }
+
 fn steer_key_to_value(
     op_type: SteerOperationType,
     in_value: f32,
@@ -442,9 +443,89 @@ impl Viewer {
 
     pub fn right_panel(&mut self, ui: &mut egui::Ui) -> egui::Response {
         if self.selected_index != -1 {
+            // We establish a static reference point for the collision boxes
+            let reference_x = self.position.x;
+            let reference_y = -self.position.y;
+            // Root motion is only applied to the character's current position
+            let circle_x = reference_x + self.root_motion.x;
+            let circle_y = reference_y - self.root_motion.y;
             egui::ScrollArea::vertical()
             .auto_shrink([false,false])
             .show(ui, |ui| {
+                ui.collapsing("Character Position", |ui| {
+                    let position: String = format!("X: {}, Y: {}", circle_x, circle_y);
+                    ui.add(egui::TextEdit::singleline(&mut position.clone()).interactive(true));
+                });
+    
+                ui.collapsing("Damage Collision Position", |ui| {
+                    for (i, damage_collision_key) in self.damage_collision_keys.iter().enumerate() {
+                        for (j, hurtbox) in damage_collision_key.boxes.iter().enumerate() {
+                            // Display collision box positions relative to the static reference point
+                            let damage_collision_pos_min = format!(
+                                "Damage Min [{}][{}]: ({}, {})",
+                                i,
+                                j,
+                                reference_x - self.position.x + hurtbox.x - hurtbox.width,
+                                reference_y + self.position.y - hurtbox.y - hurtbox.height,
+                            );
+                            ui.add(egui::TextEdit::singleline(&mut damage_collision_pos_min.clone()).interactive(true));
+
+                            let damage_collision_pos_max = format!(
+                                "Damage Max [{}][{}]: ({}, {})",
+                                i,
+                                j,
+                                reference_x - self.position.x + hurtbox.x + hurtbox.width,
+                                reference_y + self.position.y - hurtbox.y + hurtbox.height,
+                            );
+                            ui.add(egui::TextEdit::singleline(&mut damage_collision_pos_max.clone()).interactive(true));
+                        }
+                    }
+                });
+
+                ui.collapsing("Hitbox Positions", |ui| {
+                    for (i, attack_collision_key) in self.attack_collision_keys.iter().enumerate() {
+                        for (j, hitbox) in attack_collision_key.boxes.iter().enumerate() {
+                            // Display hitbox positions relative to the static reference point
+                            let hitbox_pos_min = format!(
+                                "Hitbox Min [{}][{}]: ({}, {})",
+                                i,
+                                j,
+                                reference_x - self.position.x + hitbox.x - hitbox.width,
+                                reference_y + self.position.y - hitbox.y - hitbox.height,
+                            );
+                            ui.add(egui::TextEdit::singleline(&mut hitbox_pos_min.clone()).interactive(true));
+                
+                            let hitbox_pos_max = format!(
+                                "Hitbox Max [{}][{}]: ({}, {})",
+                                i,
+                                j,
+                                reference_x - self.position.x + hitbox.x + hitbox.width,
+                                reference_y + self.position.y - hitbox.y + hitbox.height,
+                            );
+                            ui.add(egui::TextEdit::singleline(&mut hitbox_pos_max.clone()).interactive(true));
+                        }
+                    }
+
+                });
+                ui.collapsing("Push Collision Position", |ui| {
+                    for push_collision_key in &self.push_collision_keys {
+                        let pushbox = &push_collision_key.pushbox;
+                        // Display push collision box positions relative to the static reference point
+                        let push_collision_pos_min = format!(
+                            "Push Min: ({}, {})",
+                            reference_x - self.position.x + pushbox.x - pushbox.width,
+                            reference_y + self.position.y - pushbox.y - pushbox.height,
+                        );
+                        ui.add(egui::TextEdit::singleline(&mut push_collision_pos_min.clone()).interactive(true));
+                
+                        let push_collision_pos_max = format!(
+                            "Push Max: ({}, {})",
+                            reference_x - self.position.x + pushbox.x + pushbox.width,
+                            reference_y + self.position.y - pushbox.y + pushbox.height,
+                        );
+                        ui.add(egui::TextEdit::singleline(&mut push_collision_pos_max.clone()).interactive(true));
+                    }
+                });
                 ui.collapsing("Motion info", |ui| {
                     let mut position: String = format!(
                         "Current Position: {}, {}",
